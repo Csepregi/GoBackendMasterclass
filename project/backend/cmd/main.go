@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = backend.New(
+	app, err := backend.New(
 		ctx,
 		dbPgx,
 	)
@@ -31,5 +31,9 @@ func main() {
 		panic(err)
 	}
 
+	app.Run(":8080")
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("Service initialized")
 }
