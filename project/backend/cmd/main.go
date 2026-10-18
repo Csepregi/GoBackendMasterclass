@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
-
+	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"eats/backend"
