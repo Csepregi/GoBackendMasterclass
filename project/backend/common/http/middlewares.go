@@ -17,6 +17,10 @@ import (
 	"eats/backend/common/log"
 )
 
+const (
+	TestNameHeader = "TestName"
+)
+
 func useMiddlewares(e *echo.Echo) {
 	e.Use(
 		middleware.ContextTimeout(10*time.Second),
