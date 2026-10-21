@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
-
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 	log.Init(slog.LevelInfo)
 
 	dsn := os.Getenv("POSTGRES_URL")
@@ -34,7 +34,7 @@ func main() {
 		panic(err)
 	}
 
-	app.Run(":8080")
+	app.Run(ctx, ":8080")
 	if err != nil {
 		panic(err)
 	}

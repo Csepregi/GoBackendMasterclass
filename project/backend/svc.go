@@ -7,7 +7,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	echo "github.com/labstack/echo/v4"
-
+	"golang.org/x/sync/errgroup"
+	"log/slog"
+	"errors"
+	"net/http"
 	commonHTTP "eats/backend/common/http"
 	"eats/backend/common/log"
 	"eats/backend/common/module"
@@ -75,13 +78,36 @@ func New(
 	}, nil
 }
 
-func (s *Svc) Run(port string) error {
+func (s *Svc) Run(ctx context.Context, port string) error {
 	defer s.dbPgx.Close()
 
-	err := s.echoRouter.Start(port)
-	if err != nil {
-		return fmt.Errorf("starting http server failed: %w", err)
-	}
+	g, ctx := errgroup.WithContext(ctx)
 
-	return nil
+	g.Go(func() error {
+		err := s.echoRouter.Start(port)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("starting http server failed: %w", err)
+		}
+
+		return nil
+	})
+
+	g.Go(func() error {
+		<-ctx.Done()
+	
+		slog.Info("Shutting down HTTP server")
+	
+		// ctx is already canceled, so the shutdown needs its own deadline.
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+		defer cancel()
+	
+		if err := s.echoRouter.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("shutting down http server failed: %w", err)
+		}
+	
+		return nil
+	})
+	
+
+	return g.Wait()
 }
