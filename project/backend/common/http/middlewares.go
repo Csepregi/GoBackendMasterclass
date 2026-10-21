@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 	"unicode/utf8"
-
+	shortuuid "github.com/lithammer/shortuuid/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
@@ -21,12 +21,33 @@ const (
 	TestNameHeader = "TestName"
 )
 
+const CorrelationIDHeader = "Correlation-ID"
+
 func useMiddlewares(e *echo.Echo) {
 	e.Use(
 		middleware.ContextTimeout(10*time.Second),
 		middleware.Recover(),
+		correlationIDMiddleware,
 		requestLogMiddleware,
 	)
+}
+
+func correlationIDMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		req := c.Request()
+		ctx := req.Context()
+
+		reqCorrelationID := req.Header.Get(CorrelationIDHeader)
+		if reqCorrelationID == "" {
+			reqCorrelationID = shortuuid.New()
+		}
+		logger := slog.With("correlation_id", reqCorrelationID)
+		ctx = log.ToContext(ctx, logger)
+		ctx = log.ContextWithCorrelationID(ctx, reqCorrelationID)
+		c.SetRequest(req.WithContext(ctx))
+		c.Response().Header().Set(CorrelationIDHeader, reqCorrelationID)
+		return next(c)
+	}
 }
 
 type bodyCapturingWriter struct {
