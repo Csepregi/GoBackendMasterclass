@@ -30,14 +30,14 @@ func (q *Queries) GetCustomerByUUID(ctx context.Context, customerUuid common.UUI
 }
 
 const insertCustomer = `-- name: InsertCustomer :exec
-INSERT INTO orders.customers (customer_uuid, name, phone_number, address)
-VALUES ($1, $2, $3, $4)
-RETURNING customer_uuid, name, email, address, phone_number
+INSERT INTO orders.customers (customer_uuid, name, email, phone_number, address)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type InsertCustomerParams struct {
 	CustomerUuid common.UUID
 	Name         string
+	Email        string
 	PhoneNumber  string
 	Address      shared.Address
 }
@@ -46,6 +46,7 @@ func (q *Queries) InsertCustomer(ctx context.Context, arg InsertCustomerParams) 
 	_, err := q.db.Exec(ctx, insertCustomer,
 		arg.CustomerUuid,
 		arg.Name,
+		arg.Email,
 		arg.PhoneNumber,
 		arg.Address,
 	)
