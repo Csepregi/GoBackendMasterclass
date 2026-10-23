@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"time"
 	"unicode/utf8"
-	shortuuid "github.com/lithammer/shortuuid/v3"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	shortuuid "github.com/lithammer/shortuuid/v3"
 
 	"eats/backend/common/log"
 )

@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
-	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"eats/backend"

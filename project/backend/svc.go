@@ -2,20 +2,21 @@ package backend
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	echo "github.com/labstack/echo/v4"
-	"golang.org/x/sync/errgroup"
-	"log/slog"
-	"errors"
-	"net/http"
 	commonHTTP "eats/backend/common/http"
 	"eats/backend/common/log"
 	"eats/backend/common/module"
 	"eats/backend/common/module/contracts"
 	"eats/backend/orders"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	echo "github.com/labstack/echo/v4"
+	"golang.org/x/sync/errgroup"
 )
 
 type Svc struct {
@@ -94,20 +95,19 @@ func (s *Svc) Run(ctx context.Context, port string) error {
 
 	g.Go(func() error {
 		<-ctx.Done()
-	
+
 		slog.Info("Shutting down HTTP server")
-	
+
 		// ctx is already canceled, so the shutdown needs its own deadline.
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
 		defer cancel()
-	
+
 		if err := s.echoRouter.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("shutting down http server failed: %w", err)
 		}
-	
+
 		return nil
 	})
-	
 
 	return g.Wait()
 }
