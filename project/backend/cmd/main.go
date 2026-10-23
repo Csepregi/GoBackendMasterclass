@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -35,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	app.Run(ctx, ":8080")
+	err = app.Run(ctx, ":8080")
 	if err != nil {
 		panic(err)
 	}

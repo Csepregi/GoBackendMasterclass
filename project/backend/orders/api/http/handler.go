@@ -2,12 +2,10 @@ package http
 
 import (
 	"context"
-	uuid "github.com/google/uuid"
-	"eats/backend/common"
+	"github.com/google/uuid"
 )
 
 type Handler struct{
-	RegisterCustomer StrictServerInterface
 }
 
 func NewHandler() Handler {
@@ -22,7 +20,7 @@ func (h Handler) RegisterCustomer(ctx context.Context, request RegisterCustomerR
     }, nil
 }
 
-func Register(ctx context.Context, e common.EchoRouter, handler Handler) error {
+func Register(ctx context.Context, e EchoRouter, handler Handler) error {
     RegisterHandlers(e, NewStrictHandler(handler, nil))
 
     return nil
