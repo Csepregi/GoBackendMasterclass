@@ -3,8 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
+
 	"eats/backend/orders/adapters/db/dbmodels"
 	"eats/backend/orders/app"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,8 +25,6 @@ func NewCustomerRepository(db *pgxpool.Pool) *CustomerRepository {
 }
 
 func (r *CustomerRepository) RegisterCustomer(ctx context.Context, customer app.Customer) error {
-
-
 	queries := dbmodels.New(r.db)
 
 	err := queries.InsertCustomer(ctx, dbmodels.InsertCustomerParams{

@@ -4,14 +4,14 @@ import (
 	"context"
 	"embed"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"eats/backend/common"
 	"eats/backend/common/module"
 	"eats/backend/common/module/contracts"
+	"eats/backend/orders/adapters/db"
 	http2 "eats/backend/orders/api/http"
 	ordersModule "eats/backend/orders/api/module"
 	"eats/backend/orders/app"
-	"eats/backend/orders/adapters/db"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Module struct {

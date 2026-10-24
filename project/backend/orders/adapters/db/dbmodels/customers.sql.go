@@ -8,15 +8,15 @@ package dbmodels
 import (
 	"context"
 
-	"eats/backend/common"
 	"eats/backend/common/shared"
+	"eats/backend/orders/app"
 )
 
 const getCustomerByUUID = `-- name: GetCustomerByUUID :one
 SELECT customer_uuid, name, email, address, phone_number FROM orders.customers WHERE customer_uuid = $1
 `
 
-func (q *Queries) GetCustomerByUUID(ctx context.Context, customerUuid common.UUID) (OrdersCustomer, error) {
+func (q *Queries) GetCustomerByUUID(ctx context.Context, customerUuid app.CustomerUUID) (OrdersCustomer, error) {
 	row := q.db.QueryRow(ctx, getCustomerByUUID, customerUuid)
 	var i OrdersCustomer
 	err := row.Scan(
@@ -35,7 +35,7 @@ VALUES ($1, $2, $3, $4, $5)
 `
 
 type InsertCustomerParams struct {
-	CustomerUuid common.UUID
+	CustomerUuid app.CustomerUUID
 	Name         string
 	Email        string
 	PhoneNumber  string

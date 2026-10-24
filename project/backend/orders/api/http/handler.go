@@ -2,12 +2,12 @@ package http
 
 import (
 	"context"
-	"eats/backend/common"
-	"eats/backend/orders/app"
 	"fmt"
-	"eats/backend/common/shared"
-)
 
+	"eats/backend/common"
+	"eats/backend/common/shared"
+	"eats/backend/orders/app"
+)
 
 type Handler struct {
 	service *app.Service
@@ -24,11 +24,8 @@ func NewHandler(
 	}
 }
 
-
-
-
 func (h Handler) RegisterCustomer(ctx context.Context, request RegisterCustomerRequestObject) (RegisterCustomerResponseObject, error) {
-	customerUUID := common.NewUUIDv7()
+	customerUUID := app.CustomerUUID{UUID: common.NewUUIDv7()}
 	addr, err := openapiAddressToSharedAddress(request.Body.Address)
 	if err != nil {
 		return nil, fmt.Errorf("invalid address: %w", err)
@@ -43,19 +40,17 @@ func (h Handler) RegisterCustomer(ctx context.Context, request RegisterCustomerR
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return RegisterCustomer201JSONResponse{
 		CustomerUuid: customerUUID,
 	}, nil
 }
-
 
 func Register(ctx context.Context, e EchoRouter, handler Handler) error {
 	RegisterHandlers(e, NewStrictHandler(handler, nil))
 
 	return nil
 }
-
 
 func openapiAddressToSharedAddress(address Address) (shared.Address, error) {
 	return shared.NewAddress(
