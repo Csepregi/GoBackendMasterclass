@@ -3,24 +3,24 @@ package http
 import (
 	"context"
 	"eats/backend/common"
+	"eats/backend/orders/app"
+	"fmt"
+	"eats/backend/common/shared"
 )
 
-type CustomerRepository interface {
-    RegisterCustomer(ctx context.Context, customerUUID common.UUID, customer RegisterCustomer) error
-}
 
 type Handler struct {
-	customerRepository CustomerRepository
+	service *app.Service
 }
 
 func NewHandler(
-	customerRepository CustomerRepository,
+	service *app.Service,
 ) Handler {
-	if customerRepository == nil {
-		panic("customerRepository cannot be nil")
+	if service == nil {
+		panic("service cannot be nil")
 	}
 	return Handler{
-		customerRepository: customerRepository,
+		service: service,
 	}
 }
 
@@ -29,8 +29,17 @@ func NewHandler(
 
 func (h Handler) RegisterCustomer(ctx context.Context, request RegisterCustomerRequestObject) (RegisterCustomerResponseObject, error) {
 	customerUUID := common.NewUUIDv7()
-	
-	err := h.customerRepository.RegisterCustomer(ctx, customerUUID, *request.Body)
+	addr, err := openapiAddressToSharedAddress(request.Body.Address)
+	if err != nil {
+		return nil, fmt.Errorf("invalid address: %w", err)
+	}
+	err = h.service.RegisterCustomer(ctx, app.Customer{
+		CustomerUUID: customerUUID,
+		Name:         request.Body.Name,
+		Email:        string(request.Body.Email),
+		PhoneNumber:  request.Body.PhoneNumber,
+		Address:      addr,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -45,4 +54,15 @@ func Register(ctx context.Context, e EchoRouter, handler Handler) error {
 	RegisterHandlers(e, NewStrictHandler(handler, nil))
 
 	return nil
+}
+
+
+func openapiAddressToSharedAddress(address Address) (shared.Address, error) {
+	return shared.NewAddress(
+		address.Line1,
+		address.Line2,
+		address.PostalCode,
+		address.City,
+		address.CountryCode,
+	)
 }
