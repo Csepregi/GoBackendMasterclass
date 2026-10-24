@@ -5,7 +5,7 @@ import (
 	"embed"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
+	"eats/backend/orders/adapters/db"
 	"eats/backend/common"
 	"eats/backend/common/module"
 	"eats/backend/common/module/contracts"
@@ -35,7 +35,8 @@ func (m *Module) Name() module.Name {
 var embedMigrations embed.FS
 
 func (m *Module) Init(ctx context.Context) error {
-	httpHandler := http2.NewHandler(m.pgxDb)
+	customerRepo := db.NewCustomerRepository(m.pgxDb)
+	httpHandler := http2.NewHandler(customerRepo)
 	m.httpHandler = httpHandler
 
 	if err := common.MigrateDatabaseUp(
