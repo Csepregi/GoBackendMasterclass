@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"eats/backend/common"
-	"eats/backend/common/shared"
 )
 
 type CustomerRepository interface {
@@ -31,7 +30,7 @@ func NewHandler(
 func (h Handler) RegisterCustomer(ctx context.Context, request RegisterCustomerRequestObject) (RegisterCustomerResponseObject, error) {
 	customerUUID := common.NewUUIDv7()
 	
-	err := h.customerRepository.RegisterCustomer(ctx, customerUUID, request.body)
+	err := h.customerRepository.RegisterCustomer(ctx, customerUUID, *request.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -41,15 +40,6 @@ func (h Handler) RegisterCustomer(ctx context.Context, request RegisterCustomerR
 	}, nil
 }
 
-func openapiAddressToSharedAddress(address Address) (shared.Address, error) {
-	return shared.NewAddress(
-		address.Line1,
-		address.Line2,
-		address.PostalCode,
-		address.City,
-		address.CountryCode,
-	)
-}
 
 func Register(ctx context.Context, e EchoRouter, handler Handler) error {
 	RegisterHandlers(e, NewStrictHandler(handler, nil))
