@@ -9,10 +9,10 @@ import (
 func TestComponent_CriticalFlow(t *testing.T) {
 	t.Parallel()
 
-	clients := newTestClients()
+	clients := newTestClients(t)
 	ctx := t.Context()
 	country := testutils.GenerateRandomCountry()
-	customerUUID := registerCustomerInCity(ctx, t, clients, country, testutils.GenerateRandomCity())
-	customerUUID.assert(t, customerUUID)
+	customerUUID := registerCustomerInCity(ctx, t, clients, country, "San Francisco")
+	assert.NotEmpty(t, customerUUID)
 
 }
