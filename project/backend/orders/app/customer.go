@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"strings"
+
 	"eats/backend/common"
 	"eats/backend/common/shared"
 )
@@ -18,7 +19,6 @@ type Customer struct {
 	Address      shared.Address
 	PhoneNumber  string
 }
-
 
 type CustomerRepository interface {
 	RegisterCustomer(ctx context.Context, customer Customer) error
@@ -69,14 +69,13 @@ func (s *Service) RegisterCustomer(ctx context.Context, customer Customer) error
 			ErrorSlug:  "empty-phone-number",
 			Message:    "Phone number cannot be empty",
 		})
-	}	
+	}
 	if len(errDetails) > 0 {
 		return common.NewInvalidInputError(
 			"invalid_customer_data",
 			"Invalid customer data",
 		).WithDetails(errDetails)
 	}
-
 
 	return s.customerRepository.RegisterCustomer(ctx, customer)
 }
