@@ -14,12 +14,13 @@ import (
 
 func NewEcho() *echo.Echo {
 	e := echo.New()
+	e.HTTPErrorHandler = common.EchoErrorHandler
 	e.HideBanner = true
 	e.Server.WriteTimeout = 15 * time.Second
 	e.Server.ReadHeaderTimeout = 5 * time.Second
 
 	useMiddlewares(e)
-	e.HTTPErrorHandler = HandleError
+	e.HTTPErrorHandler = common.EchoErrorHandler
 	e.Logger = common.NewEchoSlogAdapter(slog.Default())
 
 	e.GET("/health", func(c echo.Context) error {
