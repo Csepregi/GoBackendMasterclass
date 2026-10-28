@@ -13,6 +13,10 @@ type Currency struct {
 	common.Enum[CurrencyType]
 }
 
+func (c Currency) Code() string {
+	return c.String()
+}
+
 
 func (c CurrencyType) Values() []string {
 	return []string{
@@ -24,7 +28,7 @@ func (c CurrencyType) Values() []string {
 	}
 }
 
-func MustNewCurrencyCode(value string) Currency {
+func MustNewCurrency(value string) Currency {
 	c := Currency{}
 	err := c.UnmarshalText([]byte(value))
 	if err != nil {
