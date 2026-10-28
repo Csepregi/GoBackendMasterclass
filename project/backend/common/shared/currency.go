@@ -6,7 +6,6 @@ import (
 	"eats/backend/common"
 )
 
-
 type CurrencyType string
 
 type Currency struct {
@@ -16,7 +15,6 @@ type Currency struct {
 func (c Currency) Code() string {
 	return c.String()
 }
-
 
 func (c CurrencyType) Values() []string {
 	return []string{
