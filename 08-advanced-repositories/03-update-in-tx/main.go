@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -39,17 +38,17 @@ func (r *StockRepository) ReserveStock(
 	orderID uuid.UUID,
 	items []ReservationItem,
 ) error {
-	for _, item := range items {
-		stock, err := getStockItem(ctx, r.db, item.ItemID)
-		if err != nil {
-			return fmt.Errorf("failed to get stock item %s: %w", item.ItemID, err)
-		}
-
+	return updateInTx(ctx, tx, func(ctx context.Context, tx pgx.Tx) error {
+		for _, item := range items {
+			stock, err := getStockItem(ctx, tx, item.ItemID)
+			if err != nil {
+				return fmt.Errorf("failed to get stock item %s: %w", item.ItemID, err)
+			}
 		if item.Quantity > stock.Available {
 			return fmt.Errorf("%w: %s has %d left, %d requested", ErrNotEnoughStock, stock.SKU, stock.Available, item.Quantity)
 		}
 
-		err = setStockAvailable(ctx, r.db, item.ItemID, stock.Available-item.Quantity)
+		err = setStockAvailable(ctx, tx, item.ItemID, stock.Available-item.Quantity)
 		if err != nil {
 			return fmt.Errorf("failed to update stock item %s: %w", item.ItemID, err)
 		}
@@ -61,11 +60,12 @@ func (r *StockRepository) ReserveStock(
 			Quantity:      item.Quantity,
 		}
 
-		err = addReservation(ctx, r.db, reservation)
+		err = addReservation(ctx, tx, reservation)
 		if err != nil {
 			return fmt.Errorf("failed to add reservation for item %s: %w", item.ItemID, err)
 		}
 	}
 
-	return nil
+		return nil	
+	})
 }
