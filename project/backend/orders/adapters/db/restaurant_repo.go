@@ -7,7 +7,7 @@ import (
 
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
+	"golang.org/x/exp/slices"
 	"eats/backend/common"
 	"eats/backend/common/log"
 	"eats/backend/orders/adapters/db/dbmodels"
@@ -29,42 +29,57 @@ func NewRestaurantRepository(db *pgxpool.Pool) *RestaurantRepository {
 }
 
 func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantUUID app.RestaurantUUID, restaurant app.OnboardRestaurant) error {
-	
 	return common.UpdateInTx(ctx, r.db, func(ctx context.Context, tx pgx.Tx) error {
-		queries := dbmodels.New(tx)
+		queries := dbmodels.New(tx)	
 
-		err := queries.UpsertRestaurant(ctx, dbmodels.UpsertRestaurantParams{
+		log.FromContext(ctx).With("restaurant_uuid", restaurantUUID).Info("Upserting restaurant")
+
+		
+
+		dbRestaurant, err := queries.UpsertRestaurant(ctx, dbmodels.UpsertRestaurantParams{
 			restaurantUUID,
 			restaurant.Name,
 			restaurant.Description,
 			restaurant.Address,
 			restaurant.Currency,
 		})
-	if err != nil {
-		return fmt.Errorf("upsert restaurant failed: %w", err)
-		}
-
-	menuItemsToArchive := make([]common.UUID, 0)
-	for _, currentItem := range currentMenuItems {
-		if !slices.Contains(newUUIDs, currentItem.MenuItemUUID) {
-			menuItemsToArchive = append(menuItemsToArchive, currentItem.MenuItemUUID)
-		}
-	}
-
-	if len(menuItemsToArchive) > 0 {
-		err := queries.ArchiveMenuItem(ctx, menuItemsToArchive)
 		if err != nil {
-			return fmt.Errorf("archive menu items failed: %w", err)
+			return fmt.Errorf("upsert restaurant failed: %w", err)
 		}
-	}
-
-
 
 	// Currency is immutable after creation - the upsert doesn't update it.
 	// Check here catches attempts to change it and returns a clear error.
 	if dbRestaurant.Currency != restaurant.Currency {
 		return common.NewInvalidInputError("cannot-change-currency", "cannot change restaurant currency once set")
 	}
+
+	currentMenuItems, err := queries.GetRestaurantMenu(ctx, restaurantUUID)
+		if err != nil {
+			return fmt.Errorf("get restaurant menu failed: %w", err)
+		}
+		currentMenuItemsUUIDs := make([]app.RestaurantMenuItemUUID, 0, len(currentMenuItems))
+		for _, item := range currentMenuItems {
+			currentMenuItemsUUIDs = append(currentMenuItemsUUIDs, item.OrdersRestaurantMenuItem.RestaurantMenuItemUuid)
+		}
+
+		newUUIDs := make([]app.RestaurantMenuItemUUID, 0, len(restaurant.MenuItems))
+		for _, item := range restaurant.MenuItems {
+			newUUIDs = append(newUUIDs, item.MenuItemUUID)
+		}
+
+		menuItemsToArchive := make([]common.UUID, 0)
+		for _, currentUUID := range currentMenuItemsUUIDs {
+			if !slices.Contains(newUUIDs, currentUUID) {
+				menuItemsToArchive = append(menuItemsToArchive, currentUUID.UUID)
+			}
+		}
+
+		if len(menuItemsToArchive) > 0 {
+			err := queries.ArchiveMenuItem(ctx, menuItemsToArchive)
+			if err != nil {
+				return fmt.Errorf("archive menu items failed: %w", err)
+			}
+		}
 
 	for _, item := range restaurant.MenuItems {
 		affectedRows, err := queries.UpsertRestaurantMenuItems(ctx, dbmodels.UpsertRestaurantMenuItemsParams{
@@ -78,7 +93,7 @@ func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantU
 		if err != nil {
 			return fmt.Errorf("upsert restaurant menu item failed: %w", err)
 		}
-
+		
 		if affectedRows == 0 {
 			return common.NewInvalidInputError(
 				"menu-item-of-another-restaurant",
@@ -87,7 +102,8 @@ func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantU
 			)
 		}
 	}
-	return err
+
+	return nil
 	})
 }
 
