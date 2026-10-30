@@ -29,20 +29,36 @@ func NewRestaurantRepository(db *pgxpool.Pool) *RestaurantRepository {
 }
 
 func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantUUID app.RestaurantUUID, restaurant app.OnboardRestaurant) error {
-	queries := dbmodels.New(r.db)
+	
+	return common.UpdateInTx(ctx, r.db, func(ctx context.Context, tx pgx.Tx) error {
+		queries := dbmodels.New(tx)
 
-	log.FromContext(ctx).With("restaurant_uuid", restaurantUUID).Info("Upserting restaurant")
-
-	dbRestaurant, err := queries.UpsertRestaurant(ctx, dbmodels.UpsertRestaurantParams{
-		restaurantUUID,
-		restaurant.Name,
-		restaurant.Description,
-		restaurant.Address,
-		restaurant.Currency,
-	})
+		err := queries.UpsertRestaurant(ctx, dbmodels.UpsertRestaurantParams{
+			restaurantUUID,
+			restaurant.Name,
+			restaurant.Description,
+			restaurant.Address,
+			restaurant.Currency,
+		})
 	if err != nil {
 		return fmt.Errorf("upsert restaurant failed: %w", err)
+		}
+
+	menuItemsToArchive := make([]common.UUID, 0)
+	for _, currentItem := range currentMenuItems {
+		if !slices.Contains(newUUIDs, currentItem.MenuItemUUID) {
+			menuItemsToArchive = append(menuItemsToArchive, currentItem.MenuItemUUID)
+		}
 	}
+
+	if len(menuItemsToArchive) > 0 {
+		err := queries.ArchiveMenuItem(ctx, menuItemsToArchive)
+		if err != nil {
+			return fmt.Errorf("archive menu items failed: %w", err)
+		}
+	}
+
+
 
 	// Currency is immutable after creation - the upsert doesn't update it.
 	// Check here catches attempts to change it and returns a clear error.
@@ -62,7 +78,7 @@ func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantU
 		if err != nil {
 			return fmt.Errorf("upsert restaurant menu item failed: %w", err)
 		}
-		
+
 		if affectedRows == 0 {
 			return common.NewInvalidInputError(
 				"menu-item-of-another-restaurant",
@@ -71,8 +87,8 @@ func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantU
 			)
 		}
 	}
-
-	return nil
+	return err
+	})
 }
 
 func (r *RestaurantRepository) GetRestaurantMenu(ctx context.Context, restaurantUUID app.RestaurantUUID) (app.RestaurantMenu, error) {
