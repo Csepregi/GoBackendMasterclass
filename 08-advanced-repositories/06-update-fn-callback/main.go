@@ -131,11 +131,24 @@ func (r *OrganizationsRepository) UpdateOrganization(
 			Licenses:       licenses,
 		}
 
-		if err := updateFn(ctx, &org, licenses); err != nil {
+		if err := updateFn(ctx, &org); err != nil {
 			return fmt.Errorf("failed to update organization %s: %w", orgID, err)
 		}
-		return persistOrganization(ctx, tx, orgRow)
+
+
+		if err := setOrganizationName(ctx, tx, org.OrganizationID, org.Name); err != nil {
+			return fmt.Errorf("failed to update organization %s: %w", org.OrganizationID, err)
+		}
+
+		for _, license := range org.Licenses {
+			if err := setLicenseSeats(ctx, tx, license.LicenseID, license.Seats); err != nil {
+				return fmt.Errorf("failed to update license %s: %w", license.LicenseID, err)
+			}
+		}
+
+		return nil
 	})
+	
 	if err != nil {
 		return Organization{}, err
 	}
