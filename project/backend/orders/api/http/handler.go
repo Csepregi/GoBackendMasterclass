@@ -3,8 +3,6 @@ package http
 import (
 	"context"
 	"fmt"
-	"maps"
-	"github.com/shopspring/decimal"
 
 	"eats/backend/common"
 	"eats/backend/common/shared"
@@ -66,29 +64,31 @@ func openapiAddressToSharedAddress(address Address) (shared.Address, error) {
 
 
 func (h Handler) OnboardRestaurant(ctx context.Context, request OnboardRestaurantRequestObject) (OnboardRestaurantResponseObject, error) {
+	var menuItems []app.MenuItem
+    for _, item := range request.Body.MenuItems {
+        menuItems = append(menuItems, app.MenuItem{
+            MenuItemUUID: item.Uuid,
+            Name:         item.Name,
+            GrossPrice:   item.GrossPrice,
+            Ordering:     float64(item.Ordering),
+        })
+    }
+	addr, err := openapiAddressToSharedAddress(request.Body.Address)
+	if err != nil {
+		return nil, fmt.Errorf("invalid address: %w", err)
+	}
 	restaurant := app.OnboardRestaurant{
 		Name:           request.Body.Name,
 		Description:    request.Body.Description,
-		MenuItems: func() []app.MenuItem {
-			return maps.Map(request.Body.MenuItems, func(item MenuItem) app.MenuItem {
-				menuItemUUID := app.RestaurantMenuItemUUID{UUID: common.NewUUIDv7()}
-				return app.MenuItem{
-					MenuItemUUID: menuItemUUID,
-					Name:         item.Name,
-					GrossPrice:   decimal.NewFromInt(item.GrossPrice),
-					Ordering:     item.Ordering.float64(),
-				}
-			})
-		}(),
-		Address:        request.Body.Address,
+		MenuItems:    	menuItems,
+		Address:        addr,
 		Currency:       request.Body.Currency,
 	}
 
-	err := h.service.OnboardRestaurant(ctx, restaurant)
+	err = h.service.OnboardRestaurant(ctx, request.RestaurantUuid, restaurant)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("onboarding restaurant failed: %w", err)
 	}
 
-	return OnboardRestaurant201JSONResponse{
-	}, nil
+	return OnboardRestaurant204Response{}, nil
 }
