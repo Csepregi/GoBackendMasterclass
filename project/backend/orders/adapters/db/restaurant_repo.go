@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	pgx "github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/exp/slices"
 	"eats/backend/common"
 	"eats/backend/common/log"
 	"eats/backend/orders/adapters/db/dbmodels"
 	"eats/backend/orders/app"
+	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/exp/slices"
 )
 
 type RestaurantRepository struct {
@@ -30,11 +30,9 @@ func NewRestaurantRepository(db *pgxpool.Pool) *RestaurantRepository {
 
 func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantUUID app.RestaurantUUID, restaurant app.OnboardRestaurant) error {
 	return common.UpdateInTx(ctx, r.db, func(ctx context.Context, tx pgx.Tx) error {
-		queries := dbmodels.New(tx)	
+		queries := dbmodels.New(tx)
 
 		log.FromContext(ctx).With("restaurant_uuid", restaurantUUID).Info("Upserting restaurant")
-
-		
 
 		dbRestaurant, err := queries.UpsertRestaurant(ctx, dbmodels.UpsertRestaurantParams{
 			restaurantUUID,
@@ -47,13 +45,13 @@ func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantU
 			return fmt.Errorf("upsert restaurant failed: %w", err)
 		}
 
-	// Currency is immutable after creation - the upsert doesn't update it.
-	// Check here catches attempts to change it and returns a clear error.
-	if dbRestaurant.Currency != restaurant.Currency {
-		return common.NewInvalidInputError("cannot-change-currency", "cannot change restaurant currency once set")
-	}
+		// Currency is immutable after creation - the upsert doesn't update it.
+		// Check here catches attempts to change it and returns a clear error.
+		if dbRestaurant.Currency != restaurant.Currency {
+			return common.NewInvalidInputError("cannot-change-currency", "cannot change restaurant currency once set")
+		}
 
-	currentMenuItems, err := queries.GetRestaurantMenu(ctx, restaurantUUID)
+		currentMenuItems, err := queries.GetRestaurantMenu(ctx, restaurantUUID)
 		if err != nil {
 			return fmt.Errorf("get restaurant menu failed: %w", err)
 		}
@@ -81,29 +79,29 @@ func (r *RestaurantRepository) UpsertRestaurant(ctx context.Context, restaurantU
 			}
 		}
 
-	for _, item := range restaurant.MenuItems {
-		affectedRows, err := queries.UpsertRestaurantMenuItems(ctx, dbmodels.UpsertRestaurantMenuItemsParams{
-			RestaurantMenuItemUuid: item.MenuItemUUID,
-			RestaurantUuid:         restaurantUUID,
-			Name:                   item.Name,
-			GrossPrice:             item.GrossPrice,
-			Ordering:               item.Ordering,
-			IsArchived:             item.IsArchived,
-		})
-		if err != nil {
-			return fmt.Errorf("upsert restaurant menu item failed: %w", err)
-		}
-		
-		if affectedRows == 0 {
-			return common.NewInvalidInputError(
-				"menu-item-of-another-restaurant",
-				"menu position s% belongs to another restaurant",
-				item.MenuItemUUID,
-			)
-		}
-	}
+		for _, item := range restaurant.MenuItems {
+			affectedRows, err := queries.UpsertRestaurantMenuItems(ctx, dbmodels.UpsertRestaurantMenuItemsParams{
+				RestaurantMenuItemUuid: item.MenuItemUUID,
+				RestaurantUuid:         restaurantUUID,
+				Name:                   item.Name,
+				GrossPrice:             item.GrossPrice,
+				Ordering:               item.Ordering,
+				IsArchived:             item.IsArchived,
+			})
+			if err != nil {
+				return fmt.Errorf("upsert restaurant menu item failed: %w", err)
+			}
 
-	return nil
+			if affectedRows == 0 {
+				return common.NewInvalidInputError(
+					"menu-item-of-another-restaurant",
+					"menu position s% belongs to another restaurant",
+					item.MenuItemUUID,
+				)
+			}
+		}
+
+		return nil
 	})
 }
 

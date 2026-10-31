@@ -3,6 +3,8 @@ package http
 import (
 	"context"
 	"fmt"
+	"maps"
+	"github.com/shopspring/decimal"
 
 	"eats/backend/common"
 	"eats/backend/common/shared"
@@ -60,4 +62,33 @@ func openapiAddressToSharedAddress(address Address) (shared.Address, error) {
 		address.City,
 		address.CountryCode,
 	)
+}
+
+
+func (h Handler) OnboardRestaurant(ctx context.Context, request OnboardRestaurantRequestObject) (OnboardRestaurantResponseObject, error) {
+	restaurant := app.OnboardRestaurant{
+		Name:           request.Body.Name,
+		Description:    request.Body.Description,
+		MenuItems: func() []app.MenuItem {
+			return maps.Map(request.Body.MenuItems, func(item MenuItem) app.MenuItem {
+				menuItemUUID := app.RestaurantMenuItemUUID{UUID: common.NewUUIDv7()}
+				return app.MenuItem{
+					MenuItemUUID: menuItemUUID,
+					Name:         item.Name,
+					GrossPrice:   decimal.NewFromInt(item.GrossPrice),
+					Ordering:     item.Ordering.float64(),
+				}
+			})
+		}(),
+		Address:        request.Body.Address,
+		Currency:       request.Body.Currency,
+	}
+
+	err := h.service.OnboardRestaurant(ctx, restaurant)
+	if err != nil {
+		return nil, err
+	}
+
+	return OnboardRestaurant201JSONResponse{
+	}, nil
 }

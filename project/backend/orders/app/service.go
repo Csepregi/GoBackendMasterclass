@@ -10,6 +10,7 @@ type Service struct {
 
 func NewService(
 	customerRepository CustomerRepository,
+	restaurantRepository RestaurantRepository,
 	modules ModulesContract,
 ) *Service {
 	if customerRepository == nil {
@@ -18,10 +19,10 @@ func NewService(
 	if modules == nil {
 		panic("modules cannot be nil")
 	}
-	// TODO: inject restaurantRepository when implemented
 
 	return &Service{
-		customerRepository: customerRepository,
-		modules:            modules,
+		customerRepository:   customerRepository,
+		modules:              modules,
+		restaurantRepository: restaurantRepository,
 	}
 }
