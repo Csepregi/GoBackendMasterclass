@@ -104,14 +104,41 @@ func (r *OrganizationsRepository) UpdateOrganization(
 	orgID uuid.UUID,
 	updateFn func(ctx context.Context, org *Organization) error,
 ) (Organization, error) {
+	var org Organization
 	err := UpdateInTx(ctx, r.db, func(ctx context.Context, tx pgx.Tx) error {
-		// TODO: load the organization with its licenses, hand them to updateFn,
-		// and persist what it leaves behind.
-		return nil
+		orgRow, err := getOrganization(ctx, tx, orgID)
+		if err != nil {
+			return fmt.Errorf("failed to get organization %s: %w", orgID, err)
+		}
+
+		licenseRows, err := getLicenses(ctx, tx, orgID)
+		if err != nil {
+			return fmt.Errorf("failed to get licenses of organization %s: %w", orgID, err)
+		}
+
+		licenses := make([]License, 0, len(licenseRows))
+		for _, row := range licenseRows {
+			licenses = append(licenses, License{
+				LicenseID: row.LicenseID,
+				ProductID: row.ProductID,
+				Seats:     row.Seats,
+			})
+		}
+
+		org = Organization{
+			OrganizationID: orgRow.OrganizationID,
+			Name:           orgRow.Name,
+			Licenses:       licenses,
+		}
+
+		if err := updateFn(ctx, &org, licenses); err != nil {
+			return fmt.Errorf("failed to update organization %s: %w", orgID, err)
+		}
+		return persistOrganization(ctx, tx, orgRow)
 	})
 	if err != nil {
 		return Organization{}, err
 	}
 
-	return Organization{}, nil
+	return org, nil
 }
