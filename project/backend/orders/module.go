@@ -4,6 +4,8 @@ import (
 	"context"
 	"embed"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"eats/backend/common"
 	"eats/backend/common/module"
 	"eats/backend/common/module/contracts"
@@ -11,7 +13,6 @@ import (
 	http2 "eats/backend/orders/api/http"
 	ordersModule "eats/backend/orders/api/module"
 	"eats/backend/orders/app"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Module struct {
@@ -39,11 +40,13 @@ func (m *Module) Init(ctx context.Context) error {
 	restaurantRepo := db.NewRestaurantRepository(m.pgxDb)
 	ordersRepo := db.NewOrdersRepository(m.pgxDb)
 	customerRepo := db.NewCustomerRepository(m.pgxDb)
+	readModel := db.NewReadModel(m.pgxDb)
 
 	appService := app.NewService(restaurantRepo, customerRepo, ordersRepo, m.modules)
 
 	httpHandler := http2.NewHandler(
 		appService,
+		readModel,
 	)
 	m.httpHandler = httpHandler
 
