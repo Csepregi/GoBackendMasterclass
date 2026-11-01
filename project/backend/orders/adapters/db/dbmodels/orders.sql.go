@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"eats/backend/common"
+	"eats/backend/common/shared"
+	"eats/backend/orders/app"
 	"github.com/shopspring/decimal"
 )
 
@@ -32,17 +34,17 @@ VALUES
 `
 
 type AddQuoteParams struct {
-	QuoteUuid          common.UUID
-	CustomerUuid       common.UUID
-	RestaurantUuid     common.UUID
-	DeliveryAddress    []byte
+	QuoteUuid          app.QuoteUUID
+	CustomerUuid       app.CustomerUUID
+	RestaurantUuid     app.RestaurantUUID
+	DeliveryAddress    shared.Address
 	ItemsSubtotalGross decimal.Decimal
 	ServiceFeeGross    decimal.Decimal
 	DeliveryFeeGross   decimal.Decimal
 	TotalAmountGross   decimal.Decimal
 	TotalTax           decimal.Decimal
 	CreatedAt          time.Time
-	Currency           string
+	Currency           shared.Currency
 }
 
 func (q *Queries) AddQuote(ctx context.Context, arg AddQuoteParams) error {
@@ -64,8 +66,8 @@ func (q *Queries) AddQuote(ctx context.Context, arg AddQuoteParams) error {
 
 type AddQuoteItemsParams struct {
 	QuoteItemUuid common.UUID
-	QuoteUuid     common.UUID
-	MenuItemUuid  common.UUID
+	QuoteUuid     app.QuoteUUID
+	MenuItemUuid  app.RestaurantMenuItemUUID
 	GrossPrice    decimal.Decimal
 	Quantity      int32
 }
@@ -80,7 +82,7 @@ WHERE
 LIMIT 1
 `
 
-func (q *Queries) GetQuote(ctx context.Context, quoteUuid common.UUID) (OrdersQuote, error) {
+func (q *Queries) GetQuote(ctx context.Context, quoteUuid app.QuoteUUID) (OrdersQuote, error) {
 	row := q.db.QueryRow(ctx, getQuote, quoteUuid)
 	var i OrdersQuote
 	err := row.Scan(
@@ -105,7 +107,7 @@ FROM orders.quote_items
 WHERE quote_uuid = $1
 `
 
-func (q *Queries) GetQuoteItems(ctx context.Context, quoteUuid common.UUID) ([]OrdersQuoteItem, error) {
+func (q *Queries) GetQuoteItems(ctx context.Context, quoteUuid app.QuoteUUID) ([]OrdersQuoteItem, error) {
 	rows, err := q.db.Query(ctx, getQuoteItems, quoteUuid)
 	if err != nil {
 		return nil, err

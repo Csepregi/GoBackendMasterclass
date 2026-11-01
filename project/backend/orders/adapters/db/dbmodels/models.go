@@ -22,23 +22,23 @@ type OrdersCustomer struct {
 }
 
 type OrdersQuote struct {
-	QuoteUuid          common.UUID
-	CustomerUuid       common.UUID
-	RestaurantUuid     common.UUID
-	DeliveryAddress    []byte
+	QuoteUuid          app.QuoteUUID
+	CustomerUuid       app.CustomerUUID
+	RestaurantUuid     app.RestaurantUUID
+	DeliveryAddress    shared.Address
 	CreatedAt          time.Time
 	ItemsSubtotalGross decimal.Decimal
 	ServiceFeeGross    decimal.Decimal
 	DeliveryFeeGross   decimal.Decimal
 	TotalAmountGross   decimal.Decimal
 	TotalTax           decimal.Decimal
-	Currency           string
+	Currency           shared.Currency
 }
 
 type OrdersQuoteItem struct {
 	QuoteItemUuid common.UUID
-	QuoteUuid     common.UUID
-	MenuItemUuid  common.UUID
+	QuoteUuid     app.QuoteUUID
+	MenuItemUuid  app.RestaurantMenuItemUUID
 	GrossPrice    decimal.Decimal
 	Quantity      int32
 }
