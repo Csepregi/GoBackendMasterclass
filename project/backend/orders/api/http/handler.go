@@ -91,3 +91,35 @@ func (h Handler) OnboardRestaurant(ctx context.Context, request OnboardRestauran
 
 	return OnboardRestaurant204Response{}, nil
 }
+
+func (h Handler) CustomerCreateQuote(ctx context.Context, request CustomerCreateQuoteRequestObject) (CustomerCreateQuoteResponseObject, error) {
+	var quoteItems []app.CreateQuoteItem
+	for _, item := range request.Body.Items {
+		quoteItems = append(quoteItems, app.CreateQuoteItem{
+			MenuItemUUID: item.MenuItemUuid,
+			Quantity:     item.Quantity,
+		})
+	}
+
+
+	quote := app.CreateQuote{
+		CustomerUUID: request.Params.CustomerUUID,
+		RestaurantUUID: request.Body.RestaurantUuid,
+		QuoteItems: quoteItems,
+		DeliveryAddress: request.Body.DeliveryAddress,
+	}
+	quote, err := h.service.CreateQuote(ctx, quote)
+	if err != nil {
+		return nil, fmt.Errorf("creating quote failed: %w", err)
+	}
+	return CustomerCreateQuote201JSONResponse{
+		QuoteUuid: app.QuoteUUID{UUID: quote.QuoteUUID},
+		ItemsSubtotalGross: decimal.NewFromInt(quote.ItemsSubtotalGross),
+		ServiceFeeGross: decimal.NewFromInt(quote.ServiceFeeGross),
+		DeliveryFeeGross: decimal.NewFromInt(quote.DeliveryFeeGross),
+		TotalAmountGross: decimal.NewFromInt(quote.TotalAmountGross),
+		TotalTax: decimal.NewFromInt(quote.TotalTax),
+		ExpiresAt: quote.ExpiresAt,
+		Currency: shared.Currency(quote.Currency),
+	}, nil
+}
