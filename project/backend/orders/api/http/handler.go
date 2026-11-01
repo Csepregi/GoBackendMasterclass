@@ -11,6 +11,7 @@ import (
 // ListMenuItemsFilter contains optional filters for the menu items query.
 type ListMenuItemsFilter struct {
 	RestaurantName *string
+	Search         *string
 	OrderBy        *string
 }
 
@@ -172,6 +173,7 @@ func (h Handler) ListMenuItems(ctx context.Context, request ListMenuItemsRequest
 
 	filter := ListMenuItemsFilter{
 		RestaurantName: request.Params.RestaurantName,
+		Search:         request.Params.Search,
 		OrderBy:        orderBy,
 	}
 
