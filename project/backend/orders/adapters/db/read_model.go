@@ -31,10 +31,10 @@ func (r ReadModel) ListMenuItemsWithRestaurant(ctx context.Context) ([]http.Menu
 	for _, row := range rows {
 		items = append(items, http.MenuItemWithRestaurant{
 			RestaurantName: row.RestaurantName,
-			MenuItemUUID:   row.MenuItemUuid,
+			MenuItemUuid:   row.MenuItemUuid,
 			MenuItemName:   row.MenuItemName,
 			Currency:       row.Currency,
-			RestaurantUUID: row.RestaurantUuid,
+			RestaurantUuid: row.RestaurantUuid,
 			GrossPrice:     row.GrossPrice,
 		})
 	}
