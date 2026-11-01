@@ -15,34 +15,46 @@ import (
 
 const listMenuItemsWithRestaurant = `-- name: ListMenuItemsWithRestaurant :many
 SELECT
-    r.name AS restaurant_name,
     mi.restaurant_menu_item_uuid AS menu_item_uuid,
     mi.name AS menu_item_name,
+    mi.gross_price,
     r.currency,
-    r.restaurant_uuid, 
-    mi.gross_price
-FROM
-    orders.restaurant_menu_items mi
-JOIN
-    orders.restaurants r ON mi.restaurant_uuid = r.restaurant_uuid
-WHERE
-    mi.is_archived = false
+    r.restaurant_uuid,
+    r.name AS restaurant_name
+FROM orders.restaurant_menu_items mi
+JOIN orders.restaurants r ON mi.restaurant_uuid = r.restaurant_uuid
+WHERE mi.is_archived = false
+  AND ($1::text IS NULL
+       OR LOWER(r.name) LIKE LOWER('%' || $1::text || '%'))
 ORDER BY
-    r.name,
-    mi.ordering
+    CASE WHEN ($2::text IS NULL OR $2::text = 'default')
+         THEN r.name END ASC,
+    CASE WHEN ($2::text IS NULL OR $2::text = 'default')
+         THEN mi.ordering END ASC,
+    CASE WHEN $2::text = 'price_asc' THEN mi.gross_price END ASC,
+    CASE WHEN $2::text = 'price_desc' THEN mi.gross_price END DESC,
+    CASE WHEN $2::text = 'name_asc' THEN mi.name END ASC,
+    CASE WHEN $2::text = 'name_desc' THEN mi.name END DESC
 `
 
-type ListMenuItemsWithRestaurantRow struct {
-	RestaurantName string
-	MenuItemUuid   app.RestaurantMenuItemUUID
-	MenuItemName   string
-	Currency       shared.Currency
-	RestaurantUuid app.RestaurantUUID
-	GrossPrice     decimal.Decimal
+type ListMenuItemsWithRestaurantParams struct {
+	RestaurantNameFilter *string
+	OrderBy              *string
 }
 
-func (q *Queries) ListMenuItemsWithRestaurant(ctx context.Context) ([]ListMenuItemsWithRestaurantRow, error) {
-	rows, err := q.db.Query(ctx, listMenuItemsWithRestaurant)
+type ListMenuItemsWithRestaurantRow struct {
+	MenuItemUuid   app.RestaurantMenuItemUUID
+	MenuItemName   string
+	GrossPrice     decimal.Decimal
+	Currency       shared.Currency
+	RestaurantUuid app.RestaurantUUID
+	RestaurantName string
+}
+
+// Lists menu items with optional restaurant name filter and dynamic ordering.
+// Uses CASE WHEN to support multiple ordering options in a single query.
+func (q *Queries) ListMenuItemsWithRestaurant(ctx context.Context, arg ListMenuItemsWithRestaurantParams) ([]ListMenuItemsWithRestaurantRow, error) {
+	rows, err := q.db.Query(ctx, listMenuItemsWithRestaurant, arg.RestaurantNameFilter, arg.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -51,12 +63,12 @@ func (q *Queries) ListMenuItemsWithRestaurant(ctx context.Context) ([]ListMenuIt
 	for rows.Next() {
 		var i ListMenuItemsWithRestaurantRow
 		if err := rows.Scan(
-			&i.RestaurantName,
 			&i.MenuItemUuid,
 			&i.MenuItemName,
+			&i.GrossPrice,
 			&i.Currency,
 			&i.RestaurantUuid,
-			&i.GrossPrice,
+			&i.RestaurantName,
 		); err != nil {
 			return nil, err
 		}
