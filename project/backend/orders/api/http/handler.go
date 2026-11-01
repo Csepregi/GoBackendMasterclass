@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"fmt"
-
 	"eats/backend/common"
 	"eats/backend/common/shared"
 	"eats/backend/orders/app"
@@ -101,25 +100,30 @@ func (h Handler) CustomerCreateQuote(ctx context.Context, request CustomerCreate
 		})
 	}
 
+	addr, err := openapiAddressToSharedAddress(request.Body.DeliveryAddress)
+	if err != nil {
+		return nil, fmt.Errorf("invalid address: %w", err)
+	}
 
-	quote := app.CreateQuote{
+	quoteservice := app.CreateQuote{
 		CustomerUUID: request.Params.CustomerUUID,
 		RestaurantUUID: request.Body.RestaurantUuid,
 		QuoteItems: quoteItems,
-		DeliveryAddress: request.Body.DeliveryAddress,
+		DeliveryAddress: addr,
 	}
-	quote, err := h.service.CreateQuote(ctx, quote)
+
+	quote, err := h.service.CreateQuote(ctx, quoteservice)
 	if err != nil {
 		return nil, fmt.Errorf("creating quote failed: %w", err)
 	}
 	return CustomerCreateQuote201JSONResponse{
-		QuoteUuid: app.QuoteUUID{UUID: quote.QuoteUUID},
-		ItemsSubtotalGross: decimal.NewFromInt(quote.ItemsSubtotalGross),
-		ServiceFeeGross: decimal.NewFromInt(quote.ServiceFeeGross),
-		DeliveryFeeGross: decimal.NewFromInt(quote.DeliveryFeeGross),
-		TotalAmountGross: decimal.NewFromInt(quote.TotalAmountGross),
-		TotalTax: decimal.NewFromInt(quote.TotalTax),
-		ExpiresAt: quote.ExpiresAt,
-		Currency: shared.Currency(quote.Currency),
+		quote.Currency,
+		quote.DeliveryFeeGross,
+		quote.ExpirationTime(),
+		quote.ItemsSubtotalGross,
+		quote.QuoteUUID,
+		quote.ServiceFeeGross,
+		quote.TotalAmountGross,
+		quote.TotalTax,
 	}, nil
 }
