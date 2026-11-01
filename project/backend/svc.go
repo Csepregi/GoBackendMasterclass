@@ -8,15 +8,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	echo "github.com/labstack/echo/v4"
+	"golang.org/x/sync/errgroup"
+
 	commonHTTP "eats/backend/common/http"
 	"eats/backend/common/log"
 	"eats/backend/common/module"
 	"eats/backend/common/module/contracts"
+	"eats/backend/delivery"
 	"eats/backend/orders"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	echo "github.com/labstack/echo/v4"
-	"golang.org/x/sync/errgroup"
 )
 
 type Svc struct {
@@ -41,6 +42,7 @@ func New(
 
 	modules := []module.Module{
 		orders.NewModule(dbPgx, moduleContracts),
+		delivery.NewModule(),
 	}
 
 	for _, module := range modules {
