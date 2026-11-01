@@ -62,27 +62,26 @@ func openapiAddressToSharedAddress(address Address) (shared.Address, error) {
 	)
 }
 
-
 func (h Handler) OnboardRestaurant(ctx context.Context, request OnboardRestaurantRequestObject) (OnboardRestaurantResponseObject, error) {
 	var menuItems []app.MenuItem
-    for _, item := range request.Body.MenuItems {
-        menuItems = append(menuItems, app.MenuItem{
-            MenuItemUUID: item.Uuid,
-            Name:         item.Name,
-            GrossPrice:   item.GrossPrice,
-            Ordering:     float64(item.Ordering),
-        })
-    }
+	for _, item := range request.Body.MenuItems {
+		menuItems = append(menuItems, app.MenuItem{
+			MenuItemUUID: item.Uuid,
+			Name:         item.Name,
+			GrossPrice:   item.GrossPrice,
+			Ordering:     float64(item.Ordering),
+		})
+	}
 	addr, err := openapiAddressToSharedAddress(request.Body.Address)
 	if err != nil {
 		return nil, fmt.Errorf("invalid address: %w", err)
 	}
 	restaurant := app.OnboardRestaurant{
-		Name:           request.Body.Name,
-		Description:    request.Body.Description,
-		MenuItems:    	menuItems,
-		Address:        addr,
-		Currency:       request.Body.Currency,
+		Name:        request.Body.Name,
+		Description: request.Body.Description,
+		MenuItems:   menuItems,
+		Address:     addr,
+		Currency:    request.Body.Currency,
 	}
 
 	err = h.service.OnboardRestaurant(ctx, request.RestaurantUuid, restaurant)
