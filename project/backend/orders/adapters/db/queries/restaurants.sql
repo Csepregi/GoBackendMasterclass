@@ -47,7 +47,7 @@ UPDATE orders.restaurant_menu_items
 SET is_archived = TRUE
 WHERE restaurant_menu_item_uuid = ANY($1::uuid[]);
 
--- name: GetMemuItemsByUUIDs :many
+-- name: GetMenuItemsByUUIDs :many
 SELECT
     restaurant_menu_items.*
 FROM

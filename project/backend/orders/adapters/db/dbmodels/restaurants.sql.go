@@ -25,7 +25,7 @@ func (q *Queries) ArchiveMenuItem(ctx context.Context, dollar_1 []common.UUID) e
 	return err
 }
 
-const getMemuItemsByUUIDs = `-- name: GetMemuItemsByUUIDs :many
+const getMenuItemsByUUIDs = `-- name: GetMenuItemsByUUIDs :many
 SELECT
     restaurant_menu_items.restaurant_menu_item_uuid, restaurant_menu_items.restaurant_uuid, restaurant_menu_items.name, restaurant_menu_items.gross_price, restaurant_menu_items.ordering, restaurant_menu_items.is_archived
 FROM
@@ -35,13 +35,13 @@ WHERE
     restaurant_menu_item_uuid = ANY ($2::UUID[])
 `
 
-type GetMemuItemsByUUIDsParams struct {
+type GetMenuItemsByUUIDsParams struct {
 	RestaurantUuid app.RestaurantUUID
 	Column2        []common.UUID
 }
 
-func (q *Queries) GetMemuItemsByUUIDs(ctx context.Context, arg GetMemuItemsByUUIDsParams) ([]OrdersRestaurantMenuItem, error) {
-	rows, err := q.db.Query(ctx, getMemuItemsByUUIDs, arg.RestaurantUuid, arg.Column2)
+func (q *Queries) GetMenuItemsByUUIDs(ctx context.Context, arg GetMenuItemsByUUIDsParams) ([]OrdersRestaurantMenuItem, error) {
+	rows, err := q.db.Query(ctx, getMenuItemsByUUIDs, arg.RestaurantUuid, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
