@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,6 +16,7 @@ import (
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
 	log.Init(slog.LevelInfo)
 
 	dsn := os.Getenv("POSTGRES_URL")
@@ -29,17 +29,16 @@ func main() {
 		panic(err)
 	}
 
-	app, err := backend.New(
+	svc, err := backend.New(
 		ctx,
 		dbPgx,
+		os.Getenv("GATEWAY_ADDR"),
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	err = app.Run(ctx, ":8080")
-	if err != nil {
+	if err := svc.Run(ctx, ":8080"); err != nil {
 		panic(err)
 	}
-	fmt.Println("Service initialized")
 }
