@@ -190,3 +190,25 @@ func Register(ctx context.Context, e EchoRouter, handler Handler) error {
 
 	return nil
 }
+
+
+func (h Handler) RegisterCourier(ctx context.Context, request RegisterCourierRequestObject) (RegisterCourierResponseObject, error) {
+	courierUUID := app.CourierUUID{common.NewUUIDv7()}
+	
+	if courierUUID.IsZero() {
+		return nil, common.NewUnauthorizedError("missing-operator-uuid", "operator UUID is required")
+	}
+
+	courierUUID, err := h.service.RegisterCourier(ctx, app.RegisterCourier{
+		Name:        request.Body.Name,
+		PhoneNumber: request.Body.PhoneNumber,
+		City:        request.Body.City,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return RegisterCourier201JSONResponse{
+		CourierUuid: courierUUID,
+	}, nil
+}
