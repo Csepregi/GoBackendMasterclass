@@ -33,23 +33,27 @@ type Quote struct {
 	CreatedAt time.Time
 }
 
+type OrderUUID struct {
+	common.UUID
+}
+
 type Order struct {
-	OrderUUID common.UUID
-	QuoteUUID QuoteUUID
-	CustomerUUID CustomerUUID
-	RestaurantUUID RestaurantUUID
-	DeliveryAddress shared.Address
-	OrderedAt time.Time
+	OrderUUID             OrderUUID
+	QuoteUUID             QuoteUUID
+	CustomerUUID          CustomerUUID
+	RestaurantUUID        RestaurantUUID
+	DeliveryAddress       shared.Address
+	OrderedAt             time.Time
 	RestaurantConfirmedAt *time.Time
 	CourierAcceptedAt     *time.Time
 	RestaurantPreparedAt  *time.Time
 	PickedUpAt            *time.Time
 	DeliveredAt           *time.Time
-	ItemsSubtotal    decimal.Decimal
-	ServiceFeeGross  decimal.Decimal
-	DeliveryFeeGross decimal.Decimal
-	TotalAmountGross decimal.Decimal
-	TotalTax         decimal.Decimal
+	ItemsSubtotal         decimal.Decimal
+	ServiceFeeGross       decimal.Decimal
+	DeliveryFeeGross      decimal.Decimal
+	TotalAmountGross      decimal.Decimal
+	TotalTax              decimal.Decimal
 
 	Currency shared.Currency
 }
@@ -89,6 +93,11 @@ type OrderRepository interface {
 	) (Quote, error)
 	QuoteMenuItems(ctx context.Context, quoteUUID QuoteUUID) (Quote, map[RestaurantMenuItemUUID]MenuItem, error)
 	SaveOrder(ctx context.Context, order Order) error
+	GetRestaurantName(ctx context.Context, restaurantUUID RestaurantUUID) (string, error)
+}
+
+func (s *Service) GetRestaurantName(ctx context.Context, restaurantUUID RestaurantUUID) (string, error) {
+	return s.orderRepository.GetRestaurantName(ctx, restaurantUUID)
 }
 
 type CreateQuote struct {
@@ -271,8 +280,8 @@ func ensureQuoteItemsAreNotArchived(menuItems map[RestaurantMenuItemUUID]MenuIte
 }
 
 func NewOrderFromQuote(quote Quote) (Order, error) {
-    return Order{
-		OrderUUID:        common.NewUUIDv7(),
+	return Order{
+		OrderUUID:        OrderUUID{common.NewUUIDv7()},
 		QuoteUUID:        quote.QuoteUUID,
 		CustomerUUID:     quote.CustomerUUID,
 		RestaurantUUID:   quote.RestaurantUUID,
@@ -286,8 +295,6 @@ func NewOrderFromQuote(quote Quote) (Order, error) {
 		Currency:         quote.Currency,
 	}, nil
 }
-
-
 
 func (s *Service) PlaceOrder(ctx context.Context, req PlaceOrder) (Order, error) {
 	quote, menuItems, err := s.orderRepository.QuoteMenuItems(ctx, req.QuoteUUID)
@@ -317,22 +324,23 @@ func (s *Service) PlaceOrder(ctx context.Context, req PlaceOrder) (Order, error)
 		}})
 	}
 
-		if err := ensureQuoteItemsAreNotArchived(menuItems); err != nil {
-			return Order{}, err
-		}
-
-		order, err := NewOrderFromQuote(quote)
-		if err != nil {
-			return order, fmt.Errorf("failed to create order: %w", err)
-		}
-
-		err = s.paymentService.CapturePayment(ctx, req.PaymentNonce, quote.TotalAmountGross, quote.RestaurantUUID.String())
-		if err != nil {
-			return order, fmt.Errorf("failed to capture payment: %w", err)
-		}
-	
-		return s.orderRepository.SaveOrder(ctx, Order{
-			OrderUUID: OrderUUID,
-			QuoteUUID: QuoteUUID,
-		})
+	if err := ensureQuoteItemsAreNotArchived(menuItems); err != nil {
+		return Order{}, err
 	}
+
+	order, err := NewOrderFromQuote(quote)
+	if err != nil {
+		return order, fmt.Errorf("failed to create order: %w", err)
+	}
+
+	err = s.paymentService.CapturePayment(ctx, req.PaymentNonce, quote.TotalAmountGross, quote.RestaurantUUID.String())
+	if err != nil {
+		return order, fmt.Errorf("failed to capture payment: %w", err)
+	}
+
+	if err := s.orderRepository.SaveOrder(ctx, order); err != nil {
+		return Order{}, fmt.Errorf("failed to save order: %w", err)
+	}
+
+	return order, nil
+}

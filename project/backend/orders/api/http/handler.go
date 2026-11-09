@@ -212,18 +212,17 @@ func (h Handler) RegisterCourier(ctx context.Context, request RegisterCourierReq
 	}, nil
 }
 
-
 func (h Handler) CustomerPlaceOrder(ctx context.Context, request CustomerPlaceOrderRequestObject) (CustomerPlaceOrderResponseObject, error) {
 	if request.Params.CustomerUUID.IsZero() {
 		return nil, common.NewUnauthorizedError("missing-customer-uuid", "customer UUID is required")
 	}
 
 	order, err := h.service.PlaceOrder(ctx, app.PlaceOrder{
-		request.Params.CustomerUUID,
-		request.Body.QuoteUuid,
-		request.Body.PaymentNonce,
+		QuoteUUID:    request.Body.QuoteUuid,
+		PaymentNonce: request.Body.PaymentNonce,
+		CustomerUUID: request.Params.CustomerUUID,
 	})
-	if err != nil {	
+	if err != nil {
 		return nil, err
 	}
 
@@ -233,6 +232,31 @@ func (h Handler) CustomerPlaceOrder(ctx context.Context, request CustomerPlaceOr
 	}
 
 	return CustomerPlaceOrder201JSONResponse{
-		restaurantName,
+		CourierAcceptedAt:     order.CourierAcceptedAt,
+		Currency:              order.Currency,
+		DeliveredAt:           order.DeliveredAt,
+		DeliveryAddress:       sharedAddressToOpenapiAddress(order.DeliveryAddress),
+		DeliveryFeeGross:      order.DeliveryFeeGross,
+		ItemsSubtotalGross:    order.ItemsSubtotal,
+		OrderUuid:             order.OrderUUID,
+		OrderedAt:             order.OrderedAt,
+		PickedUpAt:            order.PickedUpAt,
+		RestaurantConfirmedAt: order.RestaurantConfirmedAt,
+		RestaurantName:        restaurantName,
+		RestaurantPreparedAt:  order.RestaurantPreparedAt,
+		RestaurantUuid:        order.RestaurantUUID,
+		ServiceFeeGross:       order.ServiceFeeGross,
+		TotalGross:            order.TotalAmountGross,
+		TotalTax:              order.TotalTax,
 	}, nil
+}
+
+func sharedAddressToOpenapiAddress(addr shared.Address) Address {
+	return Address{
+		Line1:       addr.Line1,
+		Line2:       addr.Line2,
+		PostalCode:  addr.PostalCode,
+		City:        addr.City,
+		CountryCode: addr.CountryCode,
+	}
 }

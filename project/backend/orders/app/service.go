@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	"github.com/shopspring/decimal"
 	"eats/backend/delivery/api/module/client"
+	"github.com/shopspring/decimal"
 )
 
 type ModulesContract interface {
@@ -43,6 +43,9 @@ func NewService(
 	if courierRepository == nil {
 		panic("courierRepository cannot be nil")
 	}
+	if paymentService == nil {
+		panic("paymentService cannot be nil")
+	}
 	if modules == nil {
 		panic("modules cannot be nil")
 	}
@@ -52,6 +55,7 @@ func NewService(
 		customerRepository:   customerRepository,
 		orderRepository:      orderRepository,
 		courierRepository:    courierRepository,
+		paymentService:       paymentService,
 		modules:              modules,
 	}
 }

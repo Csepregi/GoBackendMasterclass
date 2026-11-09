@@ -30,7 +30,7 @@ func (r *CourierRepository) RegisterCourier(ctx context.Context, courierUUID app
 	return common.UpdateInTx(ctx, r.db, func(ctx context.Context, tx pgx.Tx) error {
 		queries := dbmodels.New(tx)
 		err := queries.AddCourier(ctx, dbmodels.AddCourierParams{
-			CourierUuid: courierUUID.UUID,
+			CourierUuid: courierUUID,
 			Name:        courier.Name,
 			PhoneNumber: courier.PhoneNumber,
 			City:        courier.City,
