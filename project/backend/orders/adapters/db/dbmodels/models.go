@@ -14,7 +14,7 @@ import (
 )
 
 type OrdersCourier struct {
-	CourierUuid common.UUID
+	CourierUuid app.CourierUUID
 	Name        string
 	PhoneNumber string
 	City        string
@@ -26,6 +26,27 @@ type OrdersCustomer struct {
 	Email        string
 	Address      shared.Address
 	PhoneNumber  string
+}
+
+type OrdersOrder struct {
+	OrderUuid             common.UUID
+	QuoteUuid             common.UUID
+	CustomerUuid          common.UUID
+	RestaurantUuid        common.UUID
+	CourierUuid           common.NullUUID
+	DeliveryAddress       []byte
+	OrderedAt             time.Time
+	RestaurantConfirmedAt *time.Time
+	CourierAcceptedAt     *time.Time
+	RestaurantPreparedAt  *time.Time
+	PickedUpAt            *time.Time
+	DeliveredAt           *time.Time
+	ItemsSubtotalGross    decimal.Decimal
+	ServiceFeeGross       decimal.Decimal
+	DeliveryFeeGross      decimal.Decimal
+	TotalAmountGross      decimal.Decimal
+	TotalTax              decimal.Decimal
+	Currency              string
 }
 
 type OrdersQuote struct {

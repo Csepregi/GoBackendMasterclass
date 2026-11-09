@@ -191,10 +191,9 @@ func Register(ctx context.Context, e EchoRouter, handler Handler) error {
 	return nil
 }
 
-
 func (h Handler) RegisterCourier(ctx context.Context, request RegisterCourierRequestObject) (RegisterCourierResponseObject, error) {
 	courierUUID := app.CourierUUID{common.NewUUIDv7()}
-	
+
 	if courierUUID.IsZero() {
 		return nil, common.NewUnauthorizedError("missing-operator-uuid", "operator UUID is required")
 	}
@@ -210,5 +209,30 @@ func (h Handler) RegisterCourier(ctx context.Context, request RegisterCourierReq
 
 	return RegisterCourier201JSONResponse{
 		CourierUuid: courierUUID,
+	}, nil
+}
+
+
+func (h Handler) CustomerPlaceOrder(ctx context.Context, request CustomerPlaceOrderRequestObject) (CustomerPlaceOrderResponseObject, error) {
+	if request.Params.CustomerUUID.IsZero() {
+		return nil, common.NewUnauthorizedError("missing-customer-uuid", "customer UUID is required")
+	}
+
+	order, err := h.service.PlaceOrder(ctx, app.PlaceOrder{
+		request.Params.CustomerUUID,
+		request.Body.QuoteUuid,
+		request.Body.PaymentNonce,
+	})
+	if err != nil {	
+		return nil, err
+	}
+
+	restaurantName, err := h.service.GetRestaurantName(ctx, order.RestaurantUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	return CustomerPlaceOrder201JSONResponse{
+		restaurantName,
 	}, nil
 }

@@ -33,6 +33,33 @@ type Quote struct {
 	CreatedAt time.Time
 }
 
+type Order struct {
+	OrderUUID common.UUID
+	QuoteUUID QuoteUUID
+	CustomerUUID CustomerUUID
+	RestaurantUUID RestaurantUUID
+	DeliveryAddress shared.Address
+	OrderedAt time.Time
+	RestaurantConfirmedAt *time.Time
+	CourierAcceptedAt     *time.Time
+	RestaurantPreparedAt  *time.Time
+	PickedUpAt            *time.Time
+	DeliveredAt           *time.Time
+	ItemsSubtotal    decimal.Decimal
+	ServiceFeeGross  decimal.Decimal
+	DeliveryFeeGross decimal.Decimal
+	TotalAmountGross decimal.Decimal
+	TotalTax         decimal.Decimal
+
+	Currency shared.Currency
+}
+
+type PlaceOrder struct {
+	QuoteUUID    QuoteUUID
+	PaymentNonce string
+	CustomerUUID CustomerUUID
+}
+
 func (c Quote) Expired() bool {
 	return time.Now().After(c.ExpirationTime())
 }
@@ -60,6 +87,8 @@ type OrderRepository interface {
 			restaurant Restaurant,
 		) (Quote, []QuoteMenuItem, error),
 	) (Quote, error)
+	QuoteMenuItems(ctx context.Context, quoteUUID QuoteUUID) (Quote, map[RestaurantMenuItemUUID]MenuItem, error)
+	SaveOrder(ctx context.Context, order Order) error
 }
 
 type CreateQuote struct {
@@ -240,3 +269,70 @@ func ensureQuoteItemsAreNotArchived(menuItems map[RestaurantMenuItemUUID]MenuIte
 		archivedPositions,
 	)).WithDetails(details)
 }
+
+func NewOrderFromQuote(quote Quote) (Order, error) {
+    return Order{
+		OrderUUID:        common.NewUUIDv7(),
+		QuoteUUID:        quote.QuoteUUID,
+		CustomerUUID:     quote.CustomerUUID,
+		RestaurantUUID:   quote.RestaurantUUID,
+		DeliveryAddress:  quote.DeliveryAddress,
+		OrderedAt:        time.Now(),
+		ItemsSubtotal:    quote.ItemsSubtotalGross,
+		ServiceFeeGross:  quote.ServiceFeeGross,
+		DeliveryFeeGross: quote.DeliveryFeeGross,
+		TotalAmountGross: quote.TotalAmountGross,
+		TotalTax:         quote.TotalTax,
+		Currency:         quote.Currency,
+	}, nil
+}
+
+
+
+func (s *Service) PlaceOrder(ctx context.Context, req PlaceOrder) (Order, error) {
+	quote, menuItems, err := s.orderRepository.QuoteMenuItems(ctx, req.QuoteUUID)
+	if err != nil {
+		return Order{}, err
+	}
+
+	if !quote.CustomerUUID.Equals(req.CustomerUUID.UUID) {
+		return Order{}, common.NewInvalidInputError(
+			"invalid-customer-uuid",
+			"customer UUID does not match the quote customer UUID",
+		).WithDetails([]common.ErrorDetails{{
+			EntityType: "quote",
+			ErrorSlug:  "invalid-customer-uuid",
+			Message:    fmt.Sprintf("quote customer UUID is %s", quote.CustomerUUID.String()),
+		}})
+	}
+
+	if quote.Expired() {
+		return Order{}, common.NewInvalidInputError(
+			"quote-expired",
+			"quote has expired",
+		).WithDetails([]common.ErrorDetails{{
+			EntityType: "quote",
+			ErrorSlug:  "quote-expired",
+			Message:    fmt.Sprintf("quote expired at %s", quote.ExpirationTime().Format(time.RFC3339)),
+		}})
+	}
+
+		if err := ensureQuoteItemsAreNotArchived(menuItems); err != nil {
+			return Order{}, err
+		}
+
+		order, err := NewOrderFromQuote(quote)
+		if err != nil {
+			return order, fmt.Errorf("failed to create order: %w", err)
+		}
+
+		err = s.paymentService.CapturePayment(ctx, req.PaymentNonce, quote.TotalAmountGross, quote.RestaurantUUID.String())
+		if err != nil {
+			return order, fmt.Errorf("failed to capture payment: %w", err)
+		}
+	
+		return s.orderRepository.SaveOrder(ctx, Order{
+			OrderUUID: OrderUUID,
+			QuoteUUID: QuoteUUID,
+		})
+	}

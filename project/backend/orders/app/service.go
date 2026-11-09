@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-
+	"github.com/shopspring/decimal"
 	"eats/backend/delivery/api/module/client"
 )
 
@@ -10,11 +10,16 @@ type ModulesContract interface {
 	CalculateDeliveryFee(ctx context.Context, req client.CalculateDeliveryFeeRequest) (client.CalculateDeliveryFeeResponse, error)
 }
 
+type PaymentService interface {
+	CapturePayment(ctx context.Context, nonce string, amount decimal.Decimal, merchantID string) error
+}
+
 type Service struct {
 	restaurantRepository RestaurantRepository
 	customerRepository   CustomerRepository
 	courierRepository    CourierRepository
 	orderRepository      OrderRepository
+	paymentService       PaymentService
 	modules              ModulesContract
 }
 
@@ -23,6 +28,7 @@ func NewService(
 	customerRepository CustomerRepository,
 	orderRepository OrderRepository,
 	courierRepository CourierRepository,
+	paymentService PaymentService,
 	modules ModulesContract,
 ) *Service {
 	if restaurantRepository == nil {

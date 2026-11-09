@@ -8,7 +8,7 @@ package dbmodels
 import (
 	"context"
 
-	"eats/backend/common"
+	"eats/backend/orders/app"
 )
 
 const addCourier = `-- name: AddCourier :exec
@@ -22,7 +22,7 @@ VALUES ($1, $2, $3, $4)
 `
 
 type AddCourierParams struct {
-	CourierUuid common.UUID
+	CourierUuid app.CourierUUID
 	Name        string
 	PhoneNumber string
 	City        string
@@ -43,7 +43,7 @@ DELETE FROM orders.couriers
 WHERE courier_uuid = $1
 `
 
-func (q *Queries) DeleteCourier(ctx context.Context, courierUuid common.UUID) error {
+func (q *Queries) DeleteCourier(ctx context.Context, courierUuid app.CourierUUID) error {
 	_, err := q.db.Exec(ctx, deleteCourier, courierUuid)
 	return err
 }
@@ -54,7 +54,7 @@ FROM orders.couriers
 WHERE courier_uuid = $1
 `
 
-func (q *Queries) GetCourierByUUID(ctx context.Context, courierUuid common.UUID) (OrdersCourier, error) {
+func (q *Queries) GetCourierByUUID(ctx context.Context, courierUuid app.CourierUUID) (OrdersCourier, error) {
 	row := q.db.QueryRow(ctx, getCourierByUUID, courierUuid)
 	var i OrdersCourier
 	err := row.Scan(
@@ -104,7 +104,7 @@ WHERE courier_uuid = $1
 `
 
 type UpdateCourierParams struct {
-	CourierUuid common.UUID
+	CourierUuid app.CourierUUID
 	Name        string
 	PhoneNumber string
 	City        string

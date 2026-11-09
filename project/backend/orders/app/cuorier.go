@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"strings"
+
 	"eats/backend/common"
 )
 
@@ -17,7 +18,7 @@ type RegisterCourier struct {
 }
 
 type CourierRepository interface {
-	RegisterCourier(ctx context.Context, courierUUID CourierUUID, courier RegisterCourier) (error)
+	RegisterCourier(ctx context.Context, courierUUID CourierUUID, courier RegisterCourier) error
 }
 
 func (s *Service) RegisterCourier(ctx context.Context, courier RegisterCourier) (CourierUUID, error) {
@@ -41,7 +42,7 @@ func (s *Service) RegisterCourier(ctx context.Context, courier RegisterCourier) 
 			Message:    "Name cannot be empty",
 		})
 	}
-	
+
 	if strings.TrimSpace(courier.PhoneNumber) == "" {
 		errDetails = append(errDetails, common.ErrorDetails{
 			EntityType: "courier",

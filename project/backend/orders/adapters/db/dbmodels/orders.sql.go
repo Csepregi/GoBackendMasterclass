@@ -15,6 +15,58 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const addOrder = `-- name: AddOrder :exec
+INSERT INTO orders.orders (
+	order_uuid,
+    quote_uuid,
+    customer_uuid,
+    restaurant_uuid,
+    delivery_address,
+    items_subtotal_gross,
+    service_fee_gross,
+    delivery_fee_gross,
+    total_amount_gross,
+    total_tax,
+    ordered_at,
+    currency
+)
+VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+`
+
+type AddOrderParams struct {
+	OrderUuid          common.UUID
+	QuoteUuid          common.UUID
+	CustomerUuid       common.UUID
+	RestaurantUuid     common.UUID
+	DeliveryAddress    []byte
+	ItemsSubtotalGross decimal.Decimal
+	ServiceFeeGross    decimal.Decimal
+	DeliveryFeeGross   decimal.Decimal
+	TotalAmountGross   decimal.Decimal
+	TotalTax           decimal.Decimal
+	OrderedAt          time.Time
+	Currency           string
+}
+
+func (q *Queries) AddOrder(ctx context.Context, arg AddOrderParams) error {
+	_, err := q.db.Exec(ctx, addOrder,
+		arg.OrderUuid,
+		arg.QuoteUuid,
+		arg.CustomerUuid,
+		arg.RestaurantUuid,
+		arg.DeliveryAddress,
+		arg.ItemsSubtotalGross,
+		arg.ServiceFeeGross,
+		arg.DeliveryFeeGross,
+		arg.TotalAmountGross,
+		arg.TotalTax,
+		arg.OrderedAt,
+		arg.Currency,
+	)
+	return err
+}
+
 const addQuote = `-- name: AddQuote :exec
 INSERT INTO orders.quotes (
     quote_uuid,
@@ -72,6 +124,44 @@ type AddQuoteItemsParams struct {
 	Quantity      int32
 }
 
+const getMenuItemsForQuote = `-- name: GetMenuItemsForQuote :many
+SELECT
+    restaurant_menu_items.restaurant_menu_item_uuid, restaurant_menu_items.restaurant_uuid, restaurant_menu_items.name, restaurant_menu_items.gross_price, restaurant_menu_items.ordering, restaurant_menu_items.is_archived
+FROM
+    orders.restaurant_menu_items AS restaurant_menu_items
+    INNER JOIN orders.quote_items AS quote_items
+               ON restaurant_menu_items.restaurant_menu_item_uuid = quote_items.menu_item_uuid
+WHERE
+    quote_items.quote_uuid = $1
+`
+
+func (q *Queries) GetMenuItemsForQuote(ctx context.Context, quoteUuid app.QuoteUUID) ([]OrdersRestaurantMenuItem, error) {
+	rows, err := q.db.Query(ctx, getMenuItemsForQuote, quoteUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OrdersRestaurantMenuItem{}
+	for rows.Next() {
+		var i OrdersRestaurantMenuItem
+		if err := rows.Scan(
+			&i.RestaurantMenuItemUuid,
+			&i.RestaurantUuid,
+			&i.Name,
+			&i.GrossPrice,
+			&i.Ordering,
+			&i.IsArchived,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getQuote = `-- name: GetQuote :one
 SELECT
 	quote_uuid, customer_uuid, restaurant_uuid, delivery_address, created_at, items_subtotal_gross, service_fee_gross, delivery_fee_gross, total_amount_gross, total_tax, currency
@@ -97,6 +187,27 @@ func (q *Queries) GetQuote(ctx context.Context, quoteUuid app.QuoteUUID) (Orders
 		&i.TotalAmountGross,
 		&i.TotalTax,
 		&i.Currency,
+	)
+	return i, err
+}
+
+const getQuoteItemWithMenuItems = `-- name: GetQuoteItemWithMenuItems :one
+SELECT restaurant_menu_items.restaurant_menu_item_uuid, restaurant_menu_items.restaurant_uuid, restaurant_menu_items.name, restaurant_menu_items.gross_price, restaurant_menu_items.ordering, restaurant_menu_items.is_archived
+FROM orders.restaurant_menu_items AS restaurant_menu_items
+JOIN orders.quote_items AS quote_items ON quote_items.menu_item_uuid = restaurant_menu_items.restaurant_menu_item_uuid
+WHERE quote_items.quote_uuid = $1
+`
+
+func (q *Queries) GetQuoteItemWithMenuItems(ctx context.Context, quoteUuid app.QuoteUUID) (OrdersRestaurantMenuItem, error) {
+	row := q.db.QueryRow(ctx, getQuoteItemWithMenuItems, quoteUuid)
+	var i OrdersRestaurantMenuItem
+	err := row.Scan(
+		&i.RestaurantMenuItemUuid,
+		&i.RestaurantUuid,
+		&i.Name,
+		&i.GrossPrice,
+		&i.Ordering,
+		&i.IsArchived,
 	)
 	return i, err
 }
@@ -131,4 +242,15 @@ func (q *Queries) GetQuoteItems(ctx context.Context, quoteUuid app.QuoteUUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const getRestaurantName = `-- name: GetRestaurantName :one
+SELECT name FROM orders.restaurants WHERE restaurant_uuid = $1
+`
+
+func (q *Queries) GetRestaurantName(ctx context.Context, restaurantUuid app.RestaurantUUID) (string, error) {
+	row := q.db.QueryRow(ctx, getRestaurantName, restaurantUuid)
+	var name string
+	err := row.Scan(&name)
+	return name, err
 }
